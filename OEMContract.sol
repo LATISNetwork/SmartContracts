@@ -27,15 +27,13 @@ contract OEMContract is ERC20, AccessControl {
     bytes32 private constant VIEWER = keccak256("OEMVIEWER");
     bytes32 private constant MAINTAINER = keccak256("OEMMAINTAINER");
 
-    bytes32[4] private permisssionArray = [
-        ADMIN,
-        VIEWER,
-        MAINTAINER
-    ];
-
-    address[] private manufacturerUpdates;
+    bytes32[4] private permissionArray = [ADMIN, VIEWER, MAINTAINER];
 
     string private constant _errorMessage = "No Permission";
+
+    constructor() ERC20("MyToken", "TKN") {
+        _grantRole(ADMIN, msg.sender);
+    }
 
     struct UpdateInfo {
         uint256 checksum;
@@ -46,21 +44,25 @@ contract OEMContract is ERC20, AccessControl {
         uint256 minerId;
         address CID;
         address userAddress;
+        string link;
     }
 
-    function updateManufacturer(
+    mapping(string => UpdateInfo) private myDirectory;
+
+    function pushUpdate(
         uint256 _checksum,
         uint256 _minerId,
         address _CID,
-        address _userAddress
+        address _userAddress,
+        string memory _device,
+        string memory _link,
+        string memory _version
     ) public {
         require(
             hasRole(ADMIN, msg.sender) || hasRole(MAINTAINER, msg.sender),
             _errorMessage
         );
-        manufacturerUpdates.push(
-            UpdateInfo(_checksum, fileCoin(_minerId, _CID, _userAddress))
-        );
+        
+        // call the middle notifier to send the update to the middle
     }
 }
-

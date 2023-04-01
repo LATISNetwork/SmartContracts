@@ -5,8 +5,11 @@ pragma solidity >=0.8.0 <0.9.0;
 // Information on OpenZeppelin Contracts can be found at: https://docs.openzeppelin.com/contracts/4.x/access-control
 import "node_modules/@openzeppelin/contracts/access/AccessControl.sol";
 import "node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "MiddleNotifier.sol";
 
 contract ManufacturerContract is ERC20, AccessControl {
+    MiddleManContract middleManContract = new MiddleManContract();
+
     bytes32 private ADMIN =
         0xdf8b4c520ffe197c5343c6f5aec59570151ef9a492f2c624fd45ddde6135ec42;
     bytes32 private ASSIGN_UPDATE =
