@@ -13,8 +13,6 @@ contract MiddleManContract is ERC20, AccessControl {
     bytes32 private MANUFACTURER =
         0x293ac1473af20b374a0b048d245a81412cd467992bf656b69382c50f310e9f8c;
 
-    bytes32[3] private permissionArray = [ADMIN, OEM, MANUFACTURER];
-
     struct OEMStruct {
         address oemAddress;
         mapping(string => deviceType) deviceTypes;
@@ -30,10 +28,9 @@ contract MiddleManContract is ERC20, AccessControl {
         address userAddress;
         string link;
     }
+
     // Map used to store updates based on the OEM and deviceType
     mapping(address => OEMStruct) private _OEMIdToAddress;
-
-    mapping(address => bool) private _OEMWhitelist;
 
     string private constant _errorMessage = "No Permission";
 
@@ -41,7 +38,6 @@ contract MiddleManContract is ERC20, AccessControl {
         _setupRole(ADMIN, msg.sender);
     }
     function addUpdate(
-        address _oemId,
         string memory _deviceType,
         string memory _version,
         uint256 _minerId,
@@ -50,11 +46,11 @@ contract MiddleManContract is ERC20, AccessControl {
         string memory _link
     ) public {
         require(
-            (msg.sender == _OEMIdToAddress[_oemId].oemAddress) &&
+            (msg.sender == _OEMIdToAddress[msg.sender].oemAddress) &&
             (hasRole(ADMIN, msg.sender) || hasRole(OEM, msg.sender)),
             _errorMessage
         );
-        _OEMIdToAddress[_oemId].deviceTypes[_deviceType].updates[
+        _OEMIdToAddress[msg.sender].deviceTypes[_deviceType].updates[
             _version
         ] = update(_minerId, _CID, _userAddress, _link);
     }
@@ -80,7 +76,7 @@ contract MiddleManContract is ERC20, AccessControl {
         string memory _version
     ) public {
         require(
-            (msg.sender == _OEMIdToAddress[_oemId].oemAddress)&& (hasRole(ADMIN, msg.sender) || hasRole(OEM, msg.sender)),
+            (msg.sender == _OEMIdToAddress[_oemId].oemAddress) && (hasRole(ADMIN, msg.sender) || hasRole(OEM, msg.sender)),
             _errorMessage
         );
         delete _OEMIdToAddress[_oemId].deviceTypes[_deviceType].updates[
@@ -89,16 +85,13 @@ contract MiddleManContract is ERC20, AccessControl {
     }
 
     function addOEM(address _oemAddress) public {
-        require(!_OEMWhitelist[_oemAddress], "OEM already whitelisted");
-        require(_oemAddress != address(0), "Invalid address");
         require(hasRole(ADMIN, msg.sender), _errorMessage);
         _grantRole(OEM, _oemAddress);
     }
 
     function removeOEM(address _oemAddress) public {
-        require(_OEMWhitelist[_oemAddress], "OEM not whitelisted");
-        require(_oemAddress != address(0), "Invalid address");
         require(hasRole(ADMIN, msg.sender), _errorMessage);
+        require(hasRole(OEM, _oemAddress), "OEM not whitelisted");
         _revokeRole(OEM, _oemAddress);
     }
 }

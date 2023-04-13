@@ -5,11 +5,12 @@ pragma solidity >=0.8.0 <0.9.0;
 // Information on OpenZeppelin Contracts can be found at: https://docs.openzeppelin.com/contracts/4.x/access-control
 import "node_modules/@openzeppelin/contracts/access/AccessControl.sol";
 import "node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "MiddleNotifier.sol";
+import "MiddleManContract.sol";
 
 contract ManufacturerContract is ERC20, AccessControl {
-    MiddleManContract middleManContract = new MiddleManContract();
+    MiddleManContract middleManContract;
 
+    // Instatnitate all the different permission levels
     bytes32 private ADMIN =
         0xdf8b4c520ffe197c5343c6f5aec59570151ef9a492f2c624fd45ddde6135ec42;
     bytes32 private ASSIGN_UPDATE =
@@ -25,6 +26,7 @@ contract ManufacturerContract is ERC20, AccessControl {
         ADMIN // ADMIN
     ];
 
+    // Error Message if user has incorrect permission
     string private constant _errorMessage = "No Permission";
 
     struct UpdateInfo {
@@ -44,6 +46,7 @@ contract ManufacturerContract is ERC20, AccessControl {
 
     constructor() ERC20("MyToken", "TKN") {
         _grantRole(ADMIN, msg.sender);
+        middleManContract = new MiddleManContract();
     }
 
     function assignUpdate(
@@ -102,5 +105,20 @@ contract ManufacturerContract is ERC20, AccessControl {
     function revokePermission(address _to, uint8 _permission) public {
         require(hasRole(ADMIN, msg.sender), _errorMessage);
         _revokeRole(permissionArray[_permission], _to);
+    }
+
+    function getMiddleManContract() public view returns(MiddleManContract _middleMan) {
+        require(hasRole(ADMIN, msg.sender), _errorMessage);
+        return middleManContract;
+    }
+    
+    function addOEM(address _oemAddress) public{
+        require(hasRole(ADMIN, msg.sender), _errorMessage);
+        middleManContract.addOEM(_oemAddress);
+    }
+
+    function removeOEM(address _oemAddress) public{
+        require(hasRole(ADMIN, msg.sender), _errorMessage);
+        middleManContract.removeOEM(_oemAddress);
     }
 }
