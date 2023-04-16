@@ -6,6 +6,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import "node_modules/@openzeppelin/contracts/access/AccessControl.sol";
 import "node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./MiddleManContract.sol";
+import "UpdateInfo.sol";
 
 // STRUCTURE OF THE CONTRACT
 // 1. State Variables
@@ -35,27 +36,15 @@ contract OEMContract is ERC20, AccessControl {
 
     string private constant _errorMessage = "No Permission";
 
-    constructor() ERC20("MyToken", "TKN") {
+    string private _oemName;
+
+    constructor(string memory _name) ERC20("MyToken", "TKN") {
         _grantRole(ADMIN, msg.sender);
-    }
-
-    struct Update {
-        uint256 checksum;
-        string oem;
-        string device;
-        string version;
-        FileCoin fileCoin;
-    }
-
-    struct FileCoin {
-        uint256 minerId;
-        address CID;
-        address userAddress;
-        string link;
+        _oemName = _name;
     }
 
     // list of updates
-    Update[] private myUpdates;
+    UpdateInfo.Update[] private myUpdates;
 
     // Name of company and associated middle man contracts
     mapping(string => MiddleManContract) private myManufacturers;
@@ -73,15 +62,15 @@ contract OEMContract is ERC20, AccessControl {
         string memory _link
     ) public {
         require(hasRole(MAINTAINER, msg.sender), _errorMessage);
-        FileCoin storage _fileCoin = FileCoin(
+        UpdateInfo.FileCoin memory _fileCoin = UpdateInfo.FileCoin(
             _minerId,
             _CID,
             _userAddress,
             _link
         );
-        Update storage _update = Update(
+        UpdateInfo.Update memory _update = UpdateInfo.Update(
             _checksum,
-            _OEMIdToAddress[msg.sender].oemName,
+            _oemName,
             _device,
             _version,
             _fileCoin
@@ -93,17 +82,10 @@ contract OEMContract is ERC20, AccessControl {
         uint256 _updateIndex,
         string memory _manufacturer
     ) public {
-        // This method needs to call the middle man contract with the correct parameters and push the update requrested
-        UpdateInfo storage t = myUpdates[_updateIndex];
-        FileCoin storage tloc = t.loc;
+        require(hasRole(MAINTAINER, msg.sender), _errorMessage);
         myManufacturers[_manufacturer].addUpdate(
-            t.device,
-            t.version,
-            tloc.minerId,
-            tloc.CID,
-            tloc.userAddress,
-            tloc.link
-        ); // This line will not work !!!!!!!!!!!!!!!!!!
+            myUpdates[_updateIndex]
+        );
     }
 
     function addManufacturer(
@@ -111,11 +93,10 @@ contract OEMContract is ERC20, AccessControl {
         string memory _name
     ) public {
         require(hasRole(ADMIN, msg.sender), _errorMessage);
-        myManufacturers[_name] = new MiddleManContract(_manufacturer); // Need to look more into how to do this aspect
+        myManufacturers[_name] = MiddleManContract(_manufacturer); // Need to look more into how to do this aspect
     }
 
     function removeManufacturer(
-        address _manufacturer,
         string memory _name
     ) public {
         require(hasRole(ADMIN, msg.sender), _errorMessage);

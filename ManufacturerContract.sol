@@ -6,6 +6,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import "node_modules/@openzeppelin/contracts/access/AccessControl.sol";
 import "node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "MiddleManContract.sol";
+import "UpdateInfo.sol";
 
 contract ManufacturerContract is ERC20, AccessControl {
     MiddleManContract middleManContract;
@@ -29,22 +30,7 @@ contract ManufacturerContract is ERC20, AccessControl {
     // Error Message if user has incorrect permission
     string private constant _errorMessage = "No Permission";
 
-    struct Update {
-        uint256 checksum;
-        string oem;
-        string device;
-        string version;
-        FileCoin fileCoin;
-    }
-
-    struct FileCoin {
-        uint256 minerId;
-        address CID;
-        address userAddress;
-        string link;
-    }
-
-    mapping(address => Update) private myDirectory;
+    mapping(address => UpdateInfo.Update) private myDirectory;
     address[] private pendingUpdates;
     address[] private failedUpdates;
 
@@ -55,7 +41,7 @@ contract ManufacturerContract is ERC20, AccessControl {
 
     function assignUpdate(
         address _to,
-        string memory _oem,
+        address _oem,
         string memory _device,
         string memory _version
     ) public {
@@ -89,7 +75,7 @@ contract ManufacturerContract is ERC20, AccessControl {
     function implementUpdate()
         public
         view
-        returns (Update memory)
+        returns (UpdateInfo.Update memory)
     {
         require(hasRole(IMPLEMENT_UPDATE, msg.sender), _errorMessage);
         return (
@@ -128,9 +114,9 @@ contract ManufacturerContract is ERC20, AccessControl {
     }
 
     // This method adds the address for the OEM to the middleManContract
-    function addOEM(address _oemAddress) public {
+    function addOEM(address _oemAddress, string memory _name) public {
         require(hasRole(ADMIN, msg.sender), _errorMessage);
-        middleManContract.addOEM(_oemAddress);
+        middleManContract.addOEM(_oemAddress, _name);
     }
 
     // This method removes the address for the OEM to the middleManContract

@@ -4,6 +4,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "node_modules/@openzeppelin/contracts/access/AccessControl.sol";
 import "node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "UpdateInfo.sol";
 
 contract MiddleManContract is ERC20, AccessControl {
     bytes32 private ADMIN =
@@ -19,22 +20,7 @@ contract MiddleManContract is ERC20, AccessControl {
     }
 
     struct deviceType {
-        mapping(string => update) updates;
-    }
-
-    struct Update {
-        uint256 checksum;
-        string oem;
-        string device;
-        string version;
-        FileCoin fileCoin;
-    }
-
-    struct FileCoin {
-        uint256 minerId;
-        address CID;
-        address userAddress;
-        string link;
+        mapping(string => UpdateInfo.Update) updates;
     }
 
     // Map used to store updates based on the OEM and deviceType
@@ -47,32 +33,11 @@ contract MiddleManContract is ERC20, AccessControl {
     }
 
     function addUpdate(
-        // Update Info
-        string memory _device,
-        string memory _version,
-        uint256 _checksum,
-        // FileCoin Info
-        uint256 _minerId,
-        address _CID,
-        address _userAddress,
-        string memory _link
+        UpdateInfo.Update memory _update
     ) public {
         require((hasRole(OEM, msg.sender)), _errorMessage);
-        FileCoin storage _fileCoin = FileCoin(
-            _minerId,
-            _CID,
-            _userAddress,
-            _link
-        );
-        Update storage _update = Update(
-            _checksum,
-            _OEMIdToAddress[msg.sender].oemName,
-            _device,
-            _version,
-            _fileCoin
-        );
-        _OEMIdToAddress[msg.sender].deviceTypes[_deviceType].updates[
-            _version
+        _OEMIdToAddress[msg.sender].deviceTypes[_update.device].updates[
+            _update.version
         ] = _update;
     }
 
@@ -80,7 +45,7 @@ contract MiddleManContract is ERC20, AccessControl {
         address _oemId,
         string memory _deviceType,
         string memory _version
-    ) public view returns (Update memory) {
+    ) public view returns (UpdateInfo.Update memory) {
         require(
             hasRole(ADMIN, msg.sender) ||
                 hasRole(OEM, msg.sender) ||
