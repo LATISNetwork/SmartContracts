@@ -36,12 +36,12 @@ contract OEMContract is ERC20, AccessControl {
         _grantRole(ADMIN, msg.sender);
     }
 
-    struct UpdateInfo {
+    struct Update {
         uint256 checksum;
+        string oem;
         string device;
-        string link;
         string version;
-        FileCoin loc;
+        FileCoin fileCoin;
     }
 
     struct FileCoin {
@@ -52,28 +52,41 @@ contract OEMContract is ERC20, AccessControl {
     }
 
     // list of updates
-    UpdateInfo[] private myUpdates;
+    Update[] private myUpdates;
 
     // Name of company and associated middle man contracts
     mapping(string => MiddleManContract) private myManufacturers;
 
     // Add an update to the correct locations
     function addUpdate(
+        // Update information
+        string memory _device,
+        string memory _version,
+        uint256 _checksum,
         // file coin information
         uint256 _minerId,
         address _CID,
         address _userAddress,
-        string memory _link,
-        // Update information
-        string memory _device,
-        string memory _version,
-        uint256 _checksum
+        string memory _link
     ) public {
         require(
             hasRole(MAINTAINER, msg.sender),
             _errorMessage
         );
-        myUpdates.push(UpdateInfo(_checksum, _device, _link, _version, FileCoin(_minerId, _CID, _userAddress, _link)));
+        FileCoin storage _fileCoin = FileCoin(
+            _minerId,
+            _CID,
+            _userAddress,
+            _link
+        );
+        Update storage _update = Update(
+            _checksum,
+            _OEMIdToAddress[msg.sender].oemName,
+            _device,
+            _version,
+            _fileCoin
+        );
+        myUpdates.push(_update);
     }
 
     function pushUpdate(uint256 _updateIndex, string memory _manufacturer) public {

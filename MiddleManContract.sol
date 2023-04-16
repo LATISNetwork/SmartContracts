@@ -14,7 +14,7 @@ contract MiddleManContract is ERC20, AccessControl {
         0x293ac1473af20b374a0b048d245a81412cd467992bf656b69382c50f310e9f8c;
 
     struct OEMStruct {
-        address oemAddress;
+        string oemName;
         mapping(string => deviceType) deviceTypes;
     }
 
@@ -22,7 +22,15 @@ contract MiddleManContract is ERC20, AccessControl {
         mapping(string => update) updates;
     }
 
-    struct update {
+    struct Update {
+        uint256 checksum;
+        string oem;
+        string device;
+        string version;
+        FileCoin fileCoin;
+    }
+
+    struct FileCoin {
         uint256 minerId;
         address CID;
         address userAddress;
@@ -37,29 +45,42 @@ contract MiddleManContract is ERC20, AccessControl {
     constructor() ERC20("MyToken", "TKN") {
         _setupRole(ADMIN, msg.sender);
     }
+
     function addUpdate(
-        string memory _deviceType,
+        // Update Info
+        string memory _device,
         string memory _version,
+        uint256 _checksum,
+        // FileCoin Info
         uint256 _minerId,
         address _CID,
         address _userAddress,
         string memory _link
     ) public {
-        require(
-            (msg.sender == _OEMIdToAddress[msg.sender].oemAddress) &&
-            (hasRole(ADMIN, msg.sender) || hasRole(OEM, msg.sender)),
-            _errorMessage
+        require((hasRole(OEM, msg.sender)), _errorMessage);
+        FileCoin storage _fileCoin = FileCoin(
+            _minerId,
+            _CID,
+            _userAddress,
+            _link
+        );
+        Update storage _update = Update(
+            _checksum,
+            _OEMIdToAddress[msg.sender].oemName,
+            _device,
+            _version,
+            _fileCoin
         );
         _OEMIdToAddress[msg.sender].deviceTypes[_deviceType].updates[
             _version
-        ] = update(_minerId, _CID, _userAddress, _link);
+        ] = _update;
     }
 
     function getUpdate(
         address _oemId,
         string memory _deviceType,
         string memory _version
-    ) public view returns (update memory) {
+    ) public view returns (Update memory) {
         require(
             hasRole(ADMIN, msg.sender) ||
                 hasRole(OEM, msg.sender) ||
@@ -76,7 +97,7 @@ contract MiddleManContract is ERC20, AccessControl {
         string memory _version
     ) public {
         require(
-            (msg.sender == _OEMIdToAddress[_oemId].oemAddress) && (hasRole(ADMIN, msg.sender) || hasRole(OEM, msg.sender)),
+            (hasRole(ADMIN, msg.sender) || hasRole(OEM, msg.sender)),
             _errorMessage
         );
         delete _OEMIdToAddress[_oemId].deviceTypes[_deviceType].updates[
@@ -84,14 +105,17 @@ contract MiddleManContract is ERC20, AccessControl {
         ];
     }
 
-    function addOEM(address _oemAddress) public {
+    function addOEM(address _oemAddress, string memory _name) public {
         require(hasRole(ADMIN, msg.sender), _errorMessage);
         _grantRole(OEM, _oemAddress);
+        _OEMIdToAddress[_oemAddress].oemName = _name;
     }
 
     function removeOEM(address _oemAddress) public {
         require(hasRole(ADMIN, msg.sender), _errorMessage);
         require(hasRole(OEM, _oemAddress), "OEM not whitelisted");
         _revokeRole(OEM, _oemAddress);
+        // Removes all updates from a specific OEM
+        // delete _OEMIdToAddress[_oemAddress];
     }
 }
