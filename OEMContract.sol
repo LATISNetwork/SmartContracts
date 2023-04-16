@@ -24,9 +24,12 @@ import "./MiddleManContract.sol";
 // [addToken, removeToken, addUse, removeUse, addUpdate, removeUpdate, getUpdates]
 
 contract OEMContract is ERC20, AccessControl {
-    bytes32 private constant ADMIN = 0xdf8b4c520ffe197c5343c6f5aec59570151ef9a492f2c624fd45ddde6135ec42;
-    bytes32 private constant VIEWER = 0x4acc1d14ea2d6e85862a81bf8d5c1251286193eed6e3b81aab32a560eecea7ff;
-    bytes32 private constant MAINTAINER = 0x293ac1473af20b374a0b048d245a81412cd467992bf656b69382c50f310e9f8c;
+    bytes32 private constant ADMIN =
+        0xdf8b4c520ffe197c5343c6f5aec59570151ef9a492f2c624fd45ddde6135ec42;
+    bytes32 private constant VIEWER =
+        0x4acc1d14ea2d6e85862a81bf8d5c1251286193eed6e3b81aab32a560eecea7ff;
+    bytes32 private constant MAINTAINER =
+        0x293ac1473af20b374a0b048d245a81412cd467992bf656b69382c50f310e9f8c;
 
     bytes32[4] private permissionArray = [ADMIN, VIEWER, MAINTAINER];
 
@@ -69,10 +72,7 @@ contract OEMContract is ERC20, AccessControl {
         address _userAddress,
         string memory _link
     ) public {
-        require(
-            hasRole(MAINTAINER, msg.sender),
-            _errorMessage
-        );
+        require(hasRole(MAINTAINER, msg.sender), _errorMessage);
         FileCoin storage _fileCoin = FileCoin(
             _minerId,
             _CID,
@@ -89,19 +89,35 @@ contract OEMContract is ERC20, AccessControl {
         myUpdates.push(_update);
     }
 
-    function pushUpdate(uint256 _updateIndex, string memory _manufacturer) public {
+    function pushUpdate(
+        uint256 _updateIndex,
+        string memory _manufacturer
+    ) public {
         // This method needs to call the middle man contract with the correct parameters and push the update requrested
         UpdateInfo storage t = myUpdates[_updateIndex];
         FileCoin storage tloc = t.loc;
-        myManufacturers[_manufacturer].addUpdate(t.device, t.version, tloc.minerId, tloc.CID, tloc.userAddress, tloc.link); // This line will not work !!!!!!!!!!!!!!!!!!
+        myManufacturers[_manufacturer].addUpdate(
+            t.device,
+            t.version,
+            tloc.minerId,
+            tloc.CID,
+            tloc.userAddress,
+            tloc.link
+        ); // This line will not work !!!!!!!!!!!!!!!!!!
     }
 
-    
-    function addManufacturer(address _manufacturer, string memory _name) public {
+    function addManufacturer(
+        address _manufacturer,
+        string memory _name
+    ) public {
         require(hasRole(ADMIN, msg.sender), _errorMessage);
         myManufacturers[_name] = new MiddleManContract(_manufacturer); // Need to look more into how to do this aspect
     }
-    function removeManufacturer(address _manufacturer, string memory _name) public {
+
+    function removeManufacturer(
+        address _manufacturer,
+        string memory _name
+    ) public {
         require(hasRole(ADMIN, msg.sender), _errorMessage);
         delete myManufacturers[_name];
     }

@@ -29,18 +29,22 @@ contract ManufacturerContract is ERC20, AccessControl {
     // Error Message if user has incorrect permission
     string private constant _errorMessage = "No Permission";
 
-    struct UpdateInfo {
+    struct Update {
         uint256 checksum;
-        fileCoin loc;
+        string oem;
+        string device;
+        string version;
+        FileCoin fileCoin;
     }
 
-    struct fileCoin {
+    struct FileCoin {
         uint256 minerId;
         address CID;
         address userAddress;
+        string link;
     }
 
-    mapping(address => UpdateInfo) private myDirectory;
+    mapping(address => Update) private myDirectory;
     address[] private pendingUpdates;
     address[] private failedUpdates;
 
@@ -51,20 +55,18 @@ contract ManufacturerContract is ERC20, AccessControl {
 
     function assignUpdate(
         address _to,
-        uint256 _checksum,
-        uint256 _minerId,
-        address _CID,
-        address _userAddress
+        string memory _oem,
+        string memory _device,
+        string memory _version
     ) public {
         require(hasRole(ASSIGN_UPDATE, msg.sender), _errorMessage);
-        myDirectory[_to] = UpdateInfo(
-            _checksum,
-            fileCoin(_minerId, _CID, _userAddress)
-        );
+        myDirectory[_to] = middleManContract.getUpdate(_oem, _device, _version);
         pendingUpdates.push(_to);
     }
 
-    function viewUpdates()
+    // ToDo: This method needs to be looked into
+    // May want to look into converting to a JSON and then sending as a string
+    function viewPendingUpdates()
         public
         view
         returns (address[] memory _pendingUpdates)
@@ -73,17 +75,25 @@ contract ManufacturerContract is ERC20, AccessControl {
         return (pendingUpdates);
     }
 
+    // ToDo: This method needs to be looked into
+    // May want to look into converting to a JSON and then sending as a string
+    function viewFailedUpdates()
+        public
+        view
+        returns (address[] memory _failedUpdates)
+    {
+        require(hasRole(VIEW_PENDING_UPDATES, msg.sender), _errorMessage);
+        return (failedUpdates);
+    }
+
     function implementUpdate()
         public
         view
-        returns (uint256, uint256, address, address)
+        returns (Update memory)
     {
         require(hasRole(IMPLEMENT_UPDATE, msg.sender), _errorMessage);
         return (
-            myDirectory[msg.sender].checksum,
-            myDirectory[msg.sender].loc.minerId,
-            myDirectory[msg.sender].loc.CID,
-            myDirectory[msg.sender].loc.userAddress
+            myDirectory[msg.sender]
         );
     }
 
@@ -107,17 +117,24 @@ contract ManufacturerContract is ERC20, AccessControl {
         _revokeRole(permissionArray[_permission], _to);
     }
 
-    function getMiddleManContract() public view returns(MiddleManContract _middleMan) {
+    // This method returns the solidity address of the middleManContract
+    function getMiddleManContract()
+        public
+        view
+        returns (MiddleManContract _middleMan)
+    {
         require(hasRole(ADMIN, msg.sender), _errorMessage);
         return middleManContract;
     }
-    
-    function addOEM(address _oemAddress) public{
+
+    // This method adds the address for the OEM to the middleManContract
+    function addOEM(address _oemAddress) public {
         require(hasRole(ADMIN, msg.sender), _errorMessage);
         middleManContract.addOEM(_oemAddress);
     }
 
-    function removeOEM(address _oemAddress) public{
+    // This method removes the address for the OEM to the middleManContract
+    function removeOEM(address _oemAddress) public {
         require(hasRole(ADMIN, msg.sender), _errorMessage);
         middleManContract.removeOEM(_oemAddress);
     }
