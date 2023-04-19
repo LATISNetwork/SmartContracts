@@ -43,8 +43,14 @@ contract OEMContract is ERC20, AccessControl {
         _oemName = _name;
     }
 
+    struct deviceType {
+        mapping(string => UpdateInfo.Update) updates;
+    }
+
     // list of updates
-    UpdateInfo.Update[] private myUpdates;
+    // deviceName => version => update
+    mapping(string => deviceType) myUpdates;
+    // UpdateInfo.Update[] private myUpdates;
 
     // Name of company and associated middle man contracts
     mapping(string => MiddleManContract) private myManufacturers;
@@ -75,16 +81,16 @@ contract OEMContract is ERC20, AccessControl {
             _version,
             _fileCoin
         );
-        myUpdates.push(_update);
+        myUpdates[_device].updates[_version] = _update;
     }
 
     function pushUpdate(
-        uint256 _updateIndex,
+        string memory _device,
+        string memory _version,
         string memory _manufacturer
     ) public {
         require(hasRole(MAINTAINER, msg.sender), _errorMessage);
-        //myManufacturers[_manufacturer].call(abi.encodeWithSignature("addUpdate(UpdateInfo.Update)", myUpdates[_updateIndex]));
-        myManufacturers[_manufacturer].addUpdate(myUpdates[_updateIndex]);
+        myManufacturers[_manufacturer].addUpdate(myUpdates[_device].updates[_version]);
     }
 
     function addManufacturer(
@@ -92,7 +98,6 @@ contract OEMContract is ERC20, AccessControl {
         string memory _name
     ) public {
         require(hasRole(ADMIN, msg.sender), _errorMessage);
-        //myManufacturers[_name] = _manufacturer; // Need to look more into how to do this aspect
         myManufacturers[_name] = MiddleManContract(_manufacturer);
     }
 

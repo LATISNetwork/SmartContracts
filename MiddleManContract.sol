@@ -14,17 +14,8 @@ contract MiddleManContract is ERC20, AccessControl {
     bytes32 private MANUFACTURER =
         0x293ac1473af20b374a0b048d245a81412cd467992bf656b69382c50f310e9f8c;
 
-    struct OEMStruct {
-        address oemAddress;
-        mapping(string => deviceType) deviceTypes;
-    }
-
-    struct deviceType {
-        mapping(string => UpdateInfo.Update) updates;
-    }
-
     // Map used to store updates based on the OEM and deviceType
-    mapping(string => OEMStruct) private _OEMToUpdates;
+    mapping(string => UpdateInfo.OEMStruct) private _OEMToUpdates;
 
     string private constant _errorMessage = "No Permission";
 
@@ -35,7 +26,7 @@ contract MiddleManContract is ERC20, AccessControl {
     function addUpdate(
         UpdateInfo.Update memory _update
     ) public {
-        // require((hasRole(OEM, msg.sender)), _errorMessage);
+        require((hasRole(OEM, msg.sender)), _errorMessage);
         _OEMToUpdates[_update.oem].deviceTypes[_update.device].updates[
             _update.version
         ] = _update;
@@ -46,12 +37,12 @@ contract MiddleManContract is ERC20, AccessControl {
         string memory _deviceType,
         string memory _version
     ) public view returns (UpdateInfo.Update memory) {
-        // require(
-        //     hasRole(ADMIN, msg.sender) ||
-        //         hasRole(OEM, msg.sender) ||
-        //         hasRole(MANUFACTURER, msg.sender),
-        //     _errorMessage
-        // );
+        require(
+            hasRole(ADMIN, msg.sender) ||
+                hasRole(OEM, msg.sender) ||
+                hasRole(MANUFACTURER, msg.sender),
+            _errorMessage
+        );
         return
             _OEMToUpdates[_oemName].deviceTypes[_deviceType].updates[_version];
     }

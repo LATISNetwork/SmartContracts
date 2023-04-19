@@ -11,7 +11,7 @@ const {
   ContractCallQuery,
   Hbar,
   ContractCreateFlow,
-  PublicKey,
+  PublicKey
 } = require("@hashgraph/sdk");
 const { getRandomValues } = require("crypto");
 const fs = require("fs");
@@ -181,7 +181,7 @@ async function main() {
     .setGas(1000000)
     .setFunction(
       "pushUpdate",
-      new ContractFunctionParameters().addUint256(0x00).addString("Boeing")
+      new ContractFunctionParameters().addString("3d Printer").addString("v1").addString("Boeing")
     );
   const contractPushUpdateSubmit = await contractPushUpdateTx.execute(OEM);
   const contractPushUpdateRx = await contractPushUpdateSubmit.getReceipt(OEM);
@@ -255,8 +255,6 @@ async function main() {
   console.log(`- The userAddress is: ${userAddress} \n`);
   const url = contractQuerySubmit3.getString(7);
   console.log(`- The url is: ${url} \n`);
-
-
 
   // const contractQueryTx2 = new ContractCallQuery()
   //   .setContractId(manufacturerContractId)
