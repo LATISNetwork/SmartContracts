@@ -62,14 +62,17 @@ const DEVICE = Client.forTestnet().setOperator(deviceId, deviceKey);
 
 async function main() {
   // Import the compiled contract bytecode
-  const contractBytecode = fs.readFileSync(
+  const manufacturerContractBytecode = fs.readFileSync(
     "Smart_Contract_Binary/ManufacturerContract_sol_ManufacturerContract.bin"
+  );
+  const oemContractBytecode = fs.readFileSync(
+    "Smart_Contract_Binary/OEMContract_sol_OEMContract.bin"
   );
 
   // Instantiate the manufacturer smart contract
   // This contract by default instantiate the middle-man contract
   const manufacturerContractInstantiateTx = new ContractCreateFlow()
-    .setBytecode(contractBytecode)
+    .setBytecode(manufacturerContractBytecode)
     .setGas(1000000)
     .setConstructorParameters(new ContractFunctionParameters());
   const manufacturerContractInstantiateSubmit =
@@ -80,6 +83,109 @@ async function main() {
   console.log(
     `- The manufacturer smart contract ID is: ${manufacturerContractId} \n`
   );
+
+  const oemContractInstantiateTx = new ContractCreateFlow()
+    .setBytecode(oemContractBytecode)
+    .setGas(1000000)
+    .setConstructorParameters(
+      new ContractFunctionParameters().addString("Makerbot")
+    );
+  const oemContractInstantiateSubmit = await oemContractInstantiateTx.execute(
+    OEM
+  );
+  const oemContractInstantiateRx =
+    await oemContractInstantiateSubmit.getReceipt(OEM);
+  const oemContractId = oemContractInstantiateRx.contractId;
+  console.log(`- The oem smart contract ID is: ${oemContractId} \n`);
+
+
+  // Add OEM to the manufacturer contract
+  const contractAddOEMTx = new ContractExecuteTransaction()
+    .setContractId(manufacturerContractId)
+    .setGas(1000000)
+    .setFunction(
+      "addOEM",
+      new ContractFunctionParameters()
+        .addAddress(publicKey1)
+        .addString("Makerbot")
+    );
+  const contractAddOEMSubmit = await contractAddOEMTx.execute(MANUFACTURER);
+  const contractAddOEMRx = await contractAddOEMSubmit.getReceipt(MANUFACTURER);
+  console.log("- Added OEM to manufacturer contract \n");
+
+  // Get the address of the middle-man contract
+  const contractQueryTx1 = new ContractCallQuery()
+    .setContractId(manufacturerContractId)
+    .setGas(100000)
+    .setFunction("getMiddleManContract", new ContractFunctionParameters());
+  const contractQuerySubmit1 = await contractQueryTx1.execute(MANUFACTURER);
+  const middleManAddress = contractQuerySubmit1.getAddress(0); // This address is returned in solidity format
+  console.log("- Middle Man Contract Address: ", middleManAddress, "\n");
+
+  // Add the address of the manufacturer to the OEM
+  const contractAddManufacturerTx = new ContractExecuteTransaction()
+    .setContractId(oemContractId)
+    .setGas(1000000)
+    .setFunction(
+      "addManufacturer",
+      new ContractFunctionParameters()
+        .addAddress(middleManAddress)
+        .addString("Boeing")
+    );
+  const contractAddManufacturerSubmit = await contractAddManufacturerTx.execute(
+    OEM
+  );
+  const contractAddManufacturerRx =
+    await contractAddManufacturerSubmit.getReceipt(OEM);
+  console.log("- Adding manufacturer to OEM\n");
+
+  // Add an update to the OEM
+
+  // Give MAINTAINER role to OEM
+  const contractGrantMaintainerTx = new ContractExecuteTransaction()
+    .setContractId(oemContractId)
+    .setGas(1000000)
+    .setFunction(
+      "grantPermission",
+      new ContractFunctionParameters().addAddress(publicKey1).addUint8(0x02)
+    );
+  const contractGrantMaintainerSubmit = await contractGrantMaintainerTx.execute(
+    OEM
+  );
+  const contractGrantMaintainerRx =
+    await contractGrantMaintainerSubmit.getReceipt(OEM);
+  console.log("- Granting maintainer permissions to OEM\n");
+
+  // Add Update to OEM side
+  const contractAddUpdateTx = new ContractExecuteTransaction()
+    .setContractId(oemContractId)
+    .setGas(1000000)
+    .setFunction(
+      "addUpdate",
+      new ContractFunctionParameters()
+        .addString("3d Printer")
+        .addString("v1")
+        .addUint256(0x23456789)
+        .addUint256(0x34)
+        .addAddress(publicKey1)
+        .addAddress(publicKey2)
+        .addString("https://www.google.com")
+    );
+  const contractAddUpdateSubmit = await contractAddUpdateTx.execute(OEM);
+  const contractAddUpdateRx = await contractAddUpdateSubmit.getReceipt(OEM);
+  console.log("- Adding update to OEM\n");
+
+  // Push Update to middleman contract from OEM
+  const contractPushUpdateTx = new ContractExecuteTransaction()
+    .setContractId(oemContractId)
+    .setGas(1000000)
+    .setFunction(
+      "pushUpdate",
+      new ContractFunctionParameters().addUint256(0x00).addString("Boeing")
+    );
+  const contractPushUpdateSubmit = await contractPushUpdateTx.execute(OEM);
+  const contractPushUpdateRx = await contractPushUpdateSubmit.getReceipt(OEM);
+  console.log("- Pushing update to middleman\n");
 
   // Call contract to add assign update permissions
   const contractGrantAssignTx = new ContractExecuteTransaction()
@@ -92,9 +198,9 @@ async function main() {
   const contractGrantAssignSubmit = await contractGrantAssignTx.execute(
     MANUFACTURER
   );
-  console.log("Granting assign permissions to manufacturer");
+  console.log("- Granting assign permissions to manufacturer\n");
 
-  // Call contract to add implement update permissions
+  // // Call contract to add implement update permissions
   const contractGrantImplementTx = new ContractExecuteTransaction()
     .setContractId(manufacturerContractId)
     .setGas(1000000)
@@ -105,28 +211,27 @@ async function main() {
   const contractGrantImplementSubmit = await contractGrantImplementTx.execute(
     MANUFACTURER
   );
-  console.log("Granting implement permissions to device");
+  console.log("- Granting implement permissions to device\n");
 
-  // Call contract to assign update
-  const contractAssignUpdateTx = new ContractExecuteTransaction()
+  // Fetch Update from Manufacturer
+  const contractFetchUpdateTx = new ContractExecuteTransaction()
     .setContractId(manufacturerContractId)
     .setGas(1000000)
     .setFunction(
       "assignUpdate",
       new ContractFunctionParameters()
         .addAddress(publicKey3)
-        .addUint256(0x34)
-        .addUint256(0xff32)
-        .addAddress(publicKey1)
-        .addAddress(publicKey1)
+        .addString("Makerbot")
+        .addString("3d Printer")
+        .addString("v1")
     );
-  const contractAssignUpdateSubmit = await contractAssignUpdateTx.execute(
+  const contractFetchUpdateSubmit = await contractFetchUpdateTx.execute(
     MANUFACTURER
   );
-  const contractExecuteRx = await contractGrantAssignSubmit.getReceipt(
+  const contractFetchUpdateRx = await contractFetchUpdateSubmit.getReceipt(
     MANUFACTURER
   );
-  console.log("Assigning update to device");
+  console.log("- Fetching update from middleman\n");
 
   // Call contract to implement update
   const contractQueryTx3 = new ContractCallQuery()
@@ -136,43 +241,29 @@ async function main() {
   const contractQuerySubmit3 = await contractQueryTx3.execute(DEVICE);
   const checksum = contractQuerySubmit3.getUint256(0);
   console.log(`- The checksum is: ${checksum} \n`);
-  const minerId = contractQuerySubmit3.getUint256(1);
-  console.log(`- The miner ID is: ${minerId} \n`);
-  const CID = contractQuerySubmit3.getAddress(2);
-  console.log(`- The CID is: ${CID} \n`);
-  const userAddress = contractQuerySubmit3.getAddress(3);
-  console.log(`- The user address is: ${userAddress} \n`);
+  const oem = contractQuerySubmit3.getString(1);
+  console.log(`- The OEM is: ${oem} \n`);
+  const device = contractQuerySubmit3.getString(2);
+  console.log(`- The device is: ${device} \n`);
+  const version = contractQuerySubmit3.getString(3);
+  console.log(`- The version is: ${version} \n`);
+  const minerId = contractQuerySubmit3.getUint256(4);
+  console.log(`- The minerId is: ${minerId} \n`);
+  const cid = contractQuerySubmit3.getAddress(5);
+  console.log(`- The cid is: ${cid} \n`);
+  const userAddress = contractQuerySubmit3.getAddress(6);
+  console.log(`- The userAddress is: ${userAddress} \n`);
+  const url = contractQuerySubmit3.getString(7);
+  console.log(`- The url is: ${url} \n`);
 
-  // Get the address of the middle-man contract
-  const contractQueryTx1 = new ContractCallQuery()
-    .setContractId(manufacturerContractId)
-    .setGas(100000)
-    .setFunction("getMiddleManContract", new ContractFunctionParameters());
-  const contractQuerySubmit1 = await contractQueryTx1.execute(MANUFACTURER);
-  const middleManAddress = contractQuerySubmit1.getAddress(0); // This address is returned in solidity format
-  console.log("Middle Man Contract Address: ", middleManAddress);
 
-  //   const contractQueryTx2 = new ContractCallQuery()
-  //     .setContractId(manufacturerContractId)
-  //     .setGas(100000)
-  //     .setFunction("viewUpdates", new ContractFunctionParameters());
-  //   const contractQuerySubmit2 = await contractQueryTx2.execute(MANUFACTURER);
-  //   const updates = contractQuerySubmit2.getString(0);
-  //   console.log("Updates: ", updates);
 
-  // Instantiate the oem smart contract
-  const oemContractInstantiateTx = new ContractCreateFlow()
-    .setBytecode(contractBytecode)
-    .setGas(1000000)
-    .setConstructorParameters(new ContractFunctionParameters());
-  const oemContractInstantiateSubmit = await oemContractInstantiateTx.execute(
-    OEM
-  );
-  const oemContractInstantiateRx =
-    await oemContractInstantiateSubmit.getReceipt(OEM);
-  const oemContractId = oemContractInstantiateRx.contractId;
-  console.log(`- The oem smart contract ID is: ${oemContractId} \n`);
-
-  
+  // const contractQueryTx2 = new ContractCallQuery()
+  //   .setContractId(manufacturerContractId)
+  //   .setGas(100000)
+  //   .setFunction("viewUpdates", new ContractFunctionParameters());
+  // const contractQuerySubmit2 = await contractQueryTx2.execute(MANUFACTURER);
+  // const updates = contractQuerySubmit2.getString(0);
+  // console.log("Updates: ", updates);
 }
 main();

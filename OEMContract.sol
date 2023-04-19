@@ -32,7 +32,7 @@ contract OEMContract is ERC20, AccessControl {
     bytes32 private constant MAINTAINER =
         0x293ac1473af20b374a0b048d245a81412cd467992bf656b69382c50f310e9f8c;
 
-    bytes32[4] private permissionArray = [ADMIN, VIEWER, MAINTAINER];
+    bytes32[3] private permissionArray = [ADMIN, VIEWER, MAINTAINER];
 
     string private constant _errorMessage = "No Permission";
 
@@ -83,9 +83,8 @@ contract OEMContract is ERC20, AccessControl {
         string memory _manufacturer
     ) public {
         require(hasRole(MAINTAINER, msg.sender), _errorMessage);
-        myManufacturers[_manufacturer].addUpdate(
-            myUpdates[_updateIndex]
-        );
+        //myManufacturers[_manufacturer].call(abi.encodeWithSignature("addUpdate(UpdateInfo.Update)", myUpdates[_updateIndex]));
+        myManufacturers[_manufacturer].addUpdate(myUpdates[_updateIndex]);
     }
 
     function addManufacturer(
@@ -93,7 +92,8 @@ contract OEMContract is ERC20, AccessControl {
         string memory _name
     ) public {
         require(hasRole(ADMIN, msg.sender), _errorMessage);
-        myManufacturers[_name] = MiddleManContract(_manufacturer); // Need to look more into how to do this aspect
+        //myManufacturers[_name] = _manufacturer; // Need to look more into how to do this aspect
+        myManufacturers[_name] = MiddleManContract(_manufacturer);
     }
 
     function removeManufacturer(

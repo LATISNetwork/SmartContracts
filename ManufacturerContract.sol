@@ -31,6 +31,7 @@ contract ManufacturerContract is ERC20, AccessControl {
     string private constant _errorMessage = "No Permission";
 
     mapping(address => UpdateInfo.Update) private myDirectory;
+    mapping(string => address) private nameToAddress;
     address[] private pendingUpdates;
     address[] private failedUpdates;
 
@@ -41,12 +42,12 @@ contract ManufacturerContract is ERC20, AccessControl {
 
     function assignUpdate(
         address _to,
-        address _oem,
+        string memory _oemName,
         string memory _device,
         string memory _version
     ) public {
         require(hasRole(ASSIGN_UPDATE, msg.sender), _errorMessage);
-        myDirectory[_to] = middleManContract.getUpdate(_oem, _device, _version);
+        myDirectory[_to] = middleManContract.getUpdate(_oemName, _device, _version);
         pendingUpdates.push(_to);
     }
 
@@ -75,11 +76,26 @@ contract ManufacturerContract is ERC20, AccessControl {
     function implementUpdate()
         public
         view
-        returns (UpdateInfo.Update memory)
+        returns (
+            uint256 _checksum,
+            string memory _oem,
+            string memory _device,
+            string memory _version,
+            uint256 _minerId,
+            address _CID,
+            address _userAddress,
+            string memory _link)
     {
         require(hasRole(IMPLEMENT_UPDATE, msg.sender), _errorMessage);
         return (
-            myDirectory[msg.sender]
+            myDirectory[msg.sender].checksum,
+            myDirectory[msg.sender].oem,
+            myDirectory[msg.sender].device,
+            myDirectory[msg.sender].version,
+            myDirectory[msg.sender].fileCoin.minerId,
+            myDirectory[msg.sender].fileCoin.CID,
+            myDirectory[msg.sender].fileCoin.userAddress,
+            myDirectory[msg.sender].fileCoin.link
         );
     }
 
@@ -107,10 +123,10 @@ contract ManufacturerContract is ERC20, AccessControl {
     function getMiddleManContract()
         public
         view
-        returns (MiddleManContract _middleMan)
+        returns(address _middleMan)
     {
         require(hasRole(ADMIN, msg.sender), _errorMessage);
-        return middleManContract;
+        return address(middleManContract);
     }
 
     // This method adds the address for the OEM to the middleManContract
