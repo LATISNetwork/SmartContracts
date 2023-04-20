@@ -98,7 +98,6 @@ async function main() {
   const oemContractId = oemContractInstantiateRx.contractId;
   console.log(`- The oem smart contract ID is: ${oemContractId} \n`);
 
-
   // Add OEM to the manufacturer contract
   const contractAddOEMTx = new ContractExecuteTransaction()
     .setContractId(manufacturerContractId)
@@ -157,7 +156,7 @@ async function main() {
   console.log("- Granting maintainer permissions to OEM\n");
 
   // Add Update to OEM side
-  const contractAddUpdateTx = new ContractExecuteTransaction()
+  const contractAddUpdate1Tx = new ContractExecuteTransaction()
     .setContractId(oemContractId)
     .setGas(1000000)
     .setFunction(
@@ -171,9 +170,28 @@ async function main() {
         .addAddress(publicKey2)
         .addString("https://www.google.com")
     );
-  const contractAddUpdateSubmit = await contractAddUpdateTx.execute(OEM);
-  const contractAddUpdateRx = await contractAddUpdateSubmit.getReceipt(OEM);
-  console.log("- Adding update to OEM\n");
+  const contractAddUpdate1Submit = await contractAddUpdate1Tx.execute(OEM);
+  const contractAddUpdateRx = await contractAddUpdate1Submit.getReceipt(OEM);
+  console.log("- Adding update 1 to OEM\n");
+
+  // Add Update to OEM side
+  const contractAddUpdate2Tx = new ContractExecuteTransaction()
+    .setContractId(oemContractId)
+    .setGas(1000000)
+    .setFunction(
+      "addUpdate",
+      new ContractFunctionParameters()
+        .addString("3d Printer")
+        .addString("v2")
+        .addUint256(0x23456789)
+        .addUint256(0x34)
+        .addAddress(publicKey1)
+        .addAddress(publicKey2)
+        .addString("https://www.google.com")
+    );
+  const contractAddUpdate2Submit = await contractAddUpdate2Tx.execute(OEM);
+  const contractAddUpdate2Rx = await contractAddUpdate2Submit.getReceipt(OEM);
+  console.log("- Adding update 2 to OEM\n");
 
   // Push Update to middleman contract from OEM
   const contractPushUpdateTx = new ContractExecuteTransaction()
@@ -181,11 +199,29 @@ async function main() {
     .setGas(1000000)
     .setFunction(
       "pushUpdate",
-      new ContractFunctionParameters().addString("3d Printer").addString("v1").addString("Boeing")
+      new ContractFunctionParameters()
+        .addString("3d Printer")
+        .addString("v1")
+        .addString("Boeing")
     );
   const contractPushUpdateSubmit = await contractPushUpdateTx.execute(OEM);
   const contractPushUpdateRx = await contractPushUpdateSubmit.getReceipt(OEM);
   console.log("- Pushing update to middleman\n");
+
+  // push update 2 to middleman contract from OEM
+  const contractPushUpdate2Tx = new ContractExecuteTransaction()
+    .setContractId(oemContractId)
+    .setGas(1000000)
+    .setFunction(
+      "pushUpdate",
+      new ContractFunctionParameters()
+        .addString("3d Printer")
+        .addString("v2")
+        .addString("Boeing")
+    );
+  const contractPushUpdate2Submit = await contractPushUpdate2Tx.execute(OEM);
+  const contractPushUpdate2Rx = await contractPushUpdate2Submit.getReceipt(OEM);
+  console.log("- Pushing update 2 to middleman\n");
 
   // Call contract to add assign update permissions
   const contractGrantAssignTx = new ContractExecuteTransaction()
@@ -256,12 +292,47 @@ async function main() {
   const url = contractQuerySubmit3.getString(7);
   console.log(`- The url is: ${url} \n`);
 
-  // const contractQueryTx2 = new ContractCallQuery()
-  //   .setContractId(manufacturerContractId)
-  //   .setGas(100000)
-  //   .setFunction("viewUpdates", new ContractFunctionParameters());
-  // const contractQuerySubmit2 = await contractQueryTx2.execute(MANUFACTURER);
-  // const updates = contractQuerySubmit2.getString(0);
-  // console.log("Updates: ", updates);
+  // Fetch Update 2 from Manufacturer
+  const contractFetchUpdate2Tx = new ContractExecuteTransaction()
+    .setContractId(manufacturerContractId)
+    .setGas(1000000)
+    .setFunction(
+      "assignUpdate",
+      new ContractFunctionParameters()
+        .addAddress(publicKey3)
+        .addString("Makerbot")
+        .addString("3d Printer")
+        .addString("v2")
+    );
+  const contractFetchUpdate2Submit = await contractFetchUpdate2Tx.execute(
+    MANUFACTURER
+  );
+  const contractFetchUpdate2Rx = await contractFetchUpdate2Submit.getReceipt(
+    MANUFACTURER
+  );
+  console.log("- Fetching update 2 from middleman\n");
+
+  // Call contract to implement update 2
+  const contractQueryTx4 = new ContractCallQuery()
+    .setContractId(manufacturerContractId)
+    .setGas(100000)
+    .setFunction("implementUpdate", new ContractFunctionParameters());
+  const contractQuerySubmit4 = await contractQueryTx4.execute(DEVICE);
+  const checksum2 = contractQuerySubmit4.getUint256(0);
+  console.log(`- The checksum is: ${checksum2} \n`);
+  const oem2 = contractQuerySubmit4.getString(1);
+  console.log(`- The OEM is: ${oem2} \n`);
+  const device2 = contractQuerySubmit4.getString(2);
+  console.log(`- The device is: ${device2} \n`);
+  const version2 = contractQuerySubmit4.getString(3);
+  console.log(`- The version is: ${version2} \n`);
+  const minerId2 = contractQuerySubmit4.getUint256(4);
+  console.log(`- The minerId is: ${minerId2} \n`);
+  const cid2 = contractQuerySubmit4.getAddress(5);
+  console.log(`- The cid is: ${cid2} \n`);
+  const userAddress2 = contractQuerySubmit4.getAddress(6);
+  console.log(`- The userAddress is: ${userAddress2} \n`);
+  const url2 = contractQuerySubmit4.getString(7);
+  console.log(`- The url is: ${url2} \n`);
 }
 main();
